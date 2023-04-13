@@ -3,11 +3,27 @@ import { ref, onMounted, markRaw } from 'vue'
 const canvas = ref<HTMLCanvasElement | null>(null)
 
 let particleCanvas = ref<ParticleCanvas>()
+// 网格大小 
 let width = 450
 let height = 600
 let space = 50
+
+// 下落时间
 let fallTime = 200
 
+// 计分
+let pointer = ref(0)
+
+let blockArr: Array<Array<Array<number>>> =
+  [[[-1, 0], [1, 0], [2, 0]],
+  [[-1, 0], [0, 1], [1, 1]],
+  [[1, 0], [0, 1], [-1, 1]],
+  [[1, 0], [0, 1], [1, 1]]]
+let stateBlockArr: Array<Array<Array<number>>> =
+  [[[0, 1], [0, 2], [0, -1]],
+  [[-1, 0], [-1, 1], [0, 1]],
+  [[0, -1], [1, 0], [1, 1]],
+  [[1, 0], [0, 1], [1, 1]]]
 class Block {
   x: number
   y: number
@@ -25,33 +41,14 @@ class ActiveBlock {
   type: number
   friendBlock: Block[]
   color: string
+  state: boolean
   constructor(x: number, y: number) {
     this.x = x
     this.y = y
-    this.type = Math.floor(Math.random() * 4)
+    this.state = false
+    this.type = Math.floor(Math.random() * blockArr.length)
     this.friendBlock = []
-    switch (this.type) {
-      case 0:
-        this.friendBlock.push(new Block(x - 1, y))
-        this.friendBlock.push(new Block(x + 1, y))
-        this.friendBlock.push(new Block(x + 2, y))
-        break
-      case 1:
-        this.friendBlock.push(new Block(x - 1, y))
-        this.friendBlock.push(new Block(x, y + 1))
-        this.friendBlock.push(new Block(x + 1, y + 1))
-        break
-      case 2:
-        this.friendBlock.push(new Block(x + 1, y))
-        this.friendBlock.push(new Block(x, y + 1))
-        this.friendBlock.push(new Block(x - 1, y + 1))
-        break
-      case 3:
-        this.friendBlock.push(new Block(x + 1, y))
-        this.friendBlock.push(new Block(x, y + 1))
-        this.friendBlock.push(new Block(x + 1, y + 1))
-        break
-    }
+    this.stateChange()
     this.left = this.right = this.x
     this.getBoundary()
     this.color = this.getRandomColor()
@@ -84,6 +81,19 @@ class ActiveBlock {
     this.y++
     this.friendBlock.map(item => {
       item.y++
+    })
+  }
+  stateChange() {
+    let friendArr: Array<Array<number>> = []
+    this.friendBlock = []
+    this.state = !this.state
+    if (this.state) {
+      friendArr = blockArr[this.type]
+    } else {
+      friendArr = stateBlockArr[this.type]
+    }
+    friendArr.map(item => {
+      this.friendBlock.push(new Block(this.x + item[0], this.y + item[1]))
     })
   }
   getRandomColor() {
@@ -136,6 +146,8 @@ class ParticleCanvas {
               this.activeBlock.turnRight()
             }
             break
+          case 'w': case 'W':
+            this.activeBlock.stateChange()
         }
       }
     }
@@ -189,6 +201,7 @@ class ParticleCanvas {
           }
           if (cout === this.coutX) {
             this.clearLine(i);
+            pointer.value++
             i--;
           }
         }
